@@ -1,0 +1,117 @@
+// ===============================================================
+// Debazah Firestore Security Rules (Hardened)
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Section 1: Helper Functions (Eight Pillars)
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "mrsalaam1@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isChef() {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'chef'
+      );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    // ===============================================================
+    // Section 2: Validation Blueprints
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'chef', 'user'];
+    }
+
+    function isValidRecipe(data) {
+      return data.keys().hasAll(['title', 'chefId', 'ingredients', 'steps']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.chefId is string &&
+             data.ingredients is list &&
+             data.steps is list;
+    }
+
+    function isValidReferral(data) {
+      return data.keys().hasAll(['referrerId', 'referredUserId', 'amount']) &&
+             data.referrerId is string &&
+             data.referredUserId is string &&
+             data.amount is number;
+    }
+
+    // ===============================================================
+    // Section 3: Collection Rules
+    // ===============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isAuthenticated();
+      allow list: if isAdmin() || (isAuthenticated() && request.query.limit <= 20);
+      
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      allow update: if isAdmin() || isOwner(userId);
+      
+      allow delete: if isAdmin();
+    }
+
+    // Recipes Collection
+    match /recipes/{recipeId} {
+      allow read: if true;
+      allow create: if (isAdmin() || isChef()) && isValidRecipe(request.resource.data);
+      allow update: if (isAdmin() || (isChef() && resource.data.chefId == request.auth.uid)) && isValidRecipe(request.resource.data);
+      allow delete: if isAdmin() || (isChef() && resource.data.chefId == request.auth.uid);
+    }
+
+    // Products Collection
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Referrals Collection
+    match /referrals/{referralId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.referrerId == request.auth.uid);
+      allow write: if isAdmin();
+      allow list: if isAdmin() || (isAuthenticated() && resource.data.referrerId == request.auth.uid);
+    }
+
+    // Test connection (Allow broad read for startup test only)
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

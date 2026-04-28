@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "chef", "user"] },
+        "subscription": { "type": "string", "enum": ["free", "premium"] },
+        "bio": { "type": "string" },
+        "rating": { "type": "number" },
+        "followersCount": { "type": "number" },
+        "recipesCount": { "type": "number" },
+        "paypalEmail": { "type": "string" },
+        "earnings": { "type": "number" },
+        "location": { "type": "object" },
+        "affiliateData": {
+          "type": "object",
+          "properties": {
+            "isAffiliate": { "type": "boolean" },
+            "status": { "type": "string", "enum": ["active", "paused"] },
+            "referralCode": { "type": "string" },
+            "country": { "type": "string" },
+            "totalEarnings": { "type": "number" },
+            "pendingEarnings": { "type": "number" },
+            "clicks": { "type": "number" },
+            "conversions": { "type": "number" }
+          }
+        },
+        "referredBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "referrals": {
+      "title": "Referral",
+      "description": "Referral tracking and commissions",
+      "type": "object",
+      "properties": {
+        "referrerId": { "type": "string" },
+        "referredUserId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referrerId", "referredUserId", "amount"]
+    },
+    "recipes": {
+      "title": "Recipe",
+      "description": "Cooking recipe details",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "chefId": { "type": "string" },
+        "chefName": { "type": "string" },
+        "ingredients": { "type": "array", "items": { "type": "object" } },
+        "steps": { "type": "array", "items": { "type": "string" } },
+        "videoUrl": { "type": "string" },
+        "imageUrls": { "type": "array", "items": { "type": "string" } },
+        "isPremium": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "approved"] },
+        "category": { "type": "string" },
+        "origin": { "type": "string", "enum": ["Khaliji", "Shami", "Egyptian", "European", "Asian", "Global"] },
+        "prepTime": { "type": "string", "description": "Preparation time (e.g., 15 min)" },
+        "cookTime": { "type": "string", "description": "Cooking time (e.g., 45 min)" },
+        "affiliateLinks": { "type": "array", "items": { "type": "object" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "chefId", "ingredients", "steps"]
+    },
+    "products": {
+      "title": "Product",
+      "description": "Kitchenware product from marketplace",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "source": { "type": "string" },
+        "externalUrl": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["name", "price"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profiles"
+    },
+    "/recipes/{recipeId}": {
+      "schema": "recipes",
+      "description": "Recipe collection"
+    },
+    "/products/{productId}": {
+      "schema": "products",
+      "description": "Marketplace products"
+    },
+    "/referrals/{referralId}": {
+      "schema": "referrals",
+      "description": "Affiliate referral records"
+    }
+  }
+}
